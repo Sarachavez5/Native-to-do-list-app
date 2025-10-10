@@ -4,44 +4,36 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.nativetodoapp2.ui.theme.NativeToDoApp2Theme
+import androidx.compose.runtime.*
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
+import com.example.nativetodoapp2.ui.navigation.AppNavigation
+import com.example.nativetodoapp2.ui.theme.AppMercadoTheme
+import com.example.nativetodoapp2.ui.viewmodel.AuthViewModel
+import com.example.nativetodoapp2.ui.viewmodel.ViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            NativeToDoApp2Theme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                }
+            // ViewModel de autenticación
+            val authViewModel: AuthViewModel = viewModel(
+                factory = ViewModelFactory(applicationContext)
+            )
+            
+            // Estado del modo oscuro
+            val modoOscuro by authViewModel.modoOscuro.collectAsState()
+            
+            // Tema de la aplicación
+            AppMercadoTheme(modoOscuro = modoOscuro) {
+                val navController = rememberNavController()
+                
+                AppNavigation(
+                    navController = navController,
+                    authViewModel = authViewModel
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    NativeToDoApp2Theme {
-        Greeting("Android")
     }
 }
