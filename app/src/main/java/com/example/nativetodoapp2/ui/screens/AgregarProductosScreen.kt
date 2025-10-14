@@ -6,8 +6,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -40,21 +42,53 @@ fun AgregarProductosScreen(
 ) {
     val context = LocalContext.current
     val usuarioActual by authViewModel.usuarioActual.collectAsState()
-    
+
     val listasViewModel: ListasViewModel = viewModel(
         factory = ViewModelFactory(context, usuarioActual?.id)
     )
-    
+
     var busqueda by remember { mutableStateOf("") }
     var tabSeleccionado by remember { mutableStateOf(0) }
-    
+    var productosSeleccionados by remember { mutableStateOf(setOf<Pair<String, CategoriaProducto>>()) }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Agregar productos") },
+                title = {
+                    Column {
+                        Text("Agregar productos")
+                        if (productosSeleccionados.isNotEmpty()) {
+                            Text(
+                                text = "${productosSeleccionados.size} seleccionado(s)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, "Volver")
+                    }
+                },
+                actions = {
+                    if (productosSeleccionados.isNotEmpty()) {
+                        TextButton(
+                            onClick = {
+                                productosSeleccionados.forEach { (nombre, categoria) ->
+                                    listasViewModel.agregarItem(
+                                        listaId = listaId,
+                                        nombre = nombre,
+                                        categoria = categoria
+                                    )
+                                }
+                                navController.popBackStack()
+                            }
+                        ) {
+                            Icon(Icons.Default.Check, "Agregar", modifier = Modifier.size(20.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Agregar")
+                        }
                     }
                 }
             )
@@ -75,10 +109,10 @@ fun AgregarProductosScreen(
                     value = busqueda,
                     onValueChange = { busqueda = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("🔍 Agregar nuevo producto") },
+                    placeholder = { Text("🔍 Buscar o agregar producto") },
                     singleLine = true
                 )
-                
+
                 if (busqueda.isNotEmpty()) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
@@ -97,7 +131,7 @@ fun AgregarProductosScreen(
                     }
                 }
             }
-            
+
             // Tabs: Popular / Reciente
             TabRow(selectedTabIndex = tabSeleccionado) {
                 Tab(
@@ -111,7 +145,7 @@ fun AgregarProductosScreen(
                     text = { Text("Reciente") }
                 )
             }
-            
+
             // Lista de productos por categoría
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -127,34 +161,56 @@ fun AgregarProductosScreen(
                             modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                         )
                     }
-                    
+
                     items(productos) { producto ->
+                        val productoKey = Pair(producto, categoria)
+                        val estaSeleccionado = productosSeleccionados.contains(productoKey)
+
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = {
-                                listasViewModel.agregarItem(
-                                    listaId = listaId,
-                                    nombre = producto,
-                                    categoria = categoria
-                                )
-                                navController.popBackStack()
-                            }
+                                productosSeleccionados = if (estaSeleccionado) {
+                                    productosSeleccionados - productoKey
+                                } else {
+                                    productosSeleccionados + productoKey
+                                }
+                            },
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (estaSeleccionado)
+                                    MaterialTheme.colorScheme.primaryContainer
+                                else
+                                    MaterialTheme.colorScheme.surface
+                            )
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
                                     text = producto,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (estaSeleccionado)
+                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                    else
+                                        MaterialTheme.colorScheme.onSurface
                                 )
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Agregar",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
+
+                                if (estaSeleccionado) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Seleccionado",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Agregar",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
                     }
