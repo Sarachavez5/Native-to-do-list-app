@@ -18,10 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.nativetodoapp2.ui.components.BottomNavigationBar
+import com.example.nativetodoapp2.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -263,9 +265,11 @@ fun TarjetaIntegrante(
                     .padding(vertical = 4.dp)
                     .clickable(onClick = onGitHubClick)
             ) {
-                Text(
-                    text = "🔗",
-                    modifier = Modifier.size(16.dp)
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_github),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
