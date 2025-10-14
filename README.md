@@ -2,6 +2,9 @@
 
 Una aplicación nativa de Android desarrollada con **Kotlin** y **Jetpack Compose** para gestionar listas de mercado de forma intuitiva y eficiente.
 
+##Link al figma
+Link: https://www.figma.com/proto/baYYjXM6SKjOaIR7Y0yJux/Sin-t%C3%ADtulo?node-id=7-65&starting-point-node-id=7%3A65
+
 ## 🚀 Inicio Rápido
 
 ```bash
