@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.nativetodoapp2"
+    namespace = "com.MercandoAndoApp.MercandoAndo"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.nativetodoapp2"
+        applicationId = "com.MercandoAndoApp.MercandoAndo"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
