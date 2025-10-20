@@ -304,7 +304,7 @@ El proyecto usa **Room Database** para persistencia local. Los datos se almacena
 
 #### Ubicación de la Base de Datos
 ```
-/data/data/com.example.nativetodoapp2/databases/mercado_database
+/data/data/MercandoAndo/databases/mercado_database
 ```
 
 ### Entidades (Tablas)
