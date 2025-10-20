@@ -17,16 +17,16 @@ import com.example.nativetodoapp2.ui.navigation.Rutas
 fun BottomNavigationBar(navController: NavController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    
+
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         NavigationBarItem(
-            icon = { 
+            icon = {
                 Icon(
                     if (currentRoute == Rutas.Listas.ruta) Icons.Filled.Assignment else Icons.Outlined.Assignment,
                     "Listas"
-                ) 
+                )
             },
             label = { Text("Listas") },
             selected = currentRoute == Rutas.Listas.ruta,
@@ -45,13 +45,13 @@ fun BottomNavigationBar(navController: NavController) {
                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
-        
+
         NavigationBarItem(
-            icon = { 
+            icon = {
                 Icon(
                     if (currentRoute == Rutas.Perfil.ruta) Icons.Filled.Person else Icons.Outlined.Person,
                     "Perfil"
-                ) 
+                )
             },
             label = { Text("Perfil") },
             selected = currentRoute == Rutas.Perfil.ruta,
@@ -68,13 +68,14 @@ fun BottomNavigationBar(navController: NavController) {
                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
-        
+
         NavigationBarItem(
-            icon = { 
+            icon = {
                 Icon(
-                    if (currentRoute == Rutas.Creditos.ruta) Icons.Filled.People else Icons.Outlined.People,
+                    // --- CAMBIO APLICADO AQUÍ ---
+                    if (currentRoute == Rutas.Creditos.ruta) Icons.Filled.Info else Icons.Outlined.Info,
                     "Créditos"
-                ) 
+                )
             },
             label = { Text("Créditos") },
             selected = currentRoute == Rutas.Creditos.ruta,
@@ -93,4 +94,3 @@ fun BottomNavigationBar(navController: NavController) {
         )
     }
 }
-
