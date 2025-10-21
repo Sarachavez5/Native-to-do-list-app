@@ -48,11 +48,10 @@ fun ListasScreen(
     var mostrarMenuOpciones by remember { mutableStateOf(false) }
     var listaSeleccionada by remember { mutableStateOf<ListaConItems?>(null) }
 
-    // --- NUEVO --- Estados para el modo selección
+    // Estados para el modo selección
     val modoSeleccion by listasViewModel.modoSeleccion.collectAsState()
     val listasSeleccionadasIds by listasViewModel.listasSeleccionadasIds.collectAsState()
     var mostrarDialogoBorrado by remember { mutableStateOf(false) }
-
 
     // Mostrar mensajes toast
     val snackbarHostState = remember { SnackbarHostState() }
@@ -64,7 +63,6 @@ fun ListasScreen(
 
     Scaffold(
         topBar = {
-            // --- NUEVO --- TopAppBar dinámico según el modo selección
             TopAppBar(
                 title = {
                     if (modoSeleccion) {
@@ -157,7 +155,6 @@ fun ListasScreen(
                 items(listas, key = { it.lista.id }) { listaConItems ->
                     TarjetaLista(
                         listaConItems = listaConItems,
-                        // --- NUEVO --- Lógica de click y selección
                         enModoSeleccion = modoSeleccion,
                         estaSeleccionada = listasSeleccionadasIds.contains(listaConItems.lista.id),
                         onClick = {
@@ -168,7 +165,7 @@ fun ListasScreen(
                             }
                         },
                         onMenuClick = {
-                            if (!modoSeleccion) { // Solo mostrar menú si no estamos en selección
+                            if (!modoSeleccion) {
                                 listaSeleccionada = listaConItems
                             }
                         }
@@ -178,11 +175,48 @@ fun ListasScreen(
         }
     }
 
+    // Diálogo para crear nueva lista
     if (mostrarDialogoNuevaLista) {
-        //... (Diálogo de nueva lista sin cambios)
+        var nombreLista by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { mostrarDialogoNuevaLista = false },
+            title = { Text("Crear una nueva lista") },
+            text = {
+                OutlinedTextField(
+                    value = nombreLista,
+                    onValueChange = { nombreLista = it },
+                    label = { Text("Nombre de la lista") },
+                    placeholder = { Text("Ej: Mercado de la semana") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (nombreLista.isNotBlank()) {
+                            listasViewModel.crearLista(nombreLista)
+                            mostrarDialogoNuevaLista = false
+                            nombreLista = ""
+                        }
+                    }
+                ) {
+                    Text("GUARDAR")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    mostrarDialogoNuevaLista = false
+                    nombreLista = ""
+                }) {
+                    Text("CANCELAR")
+                }
+            }
+        )
     }
 
-    // --- NUEVO --- Diálogo para confirmar borrado múltiple
+    // Diálogo para confirmar borrado múltiple
     if (mostrarDialogoBorrado) {
         AlertDialog(
             onDismissRequest = { mostrarDialogoBorrado = false },
@@ -202,14 +236,96 @@ fun ListasScreen(
         )
     }
 
-    //... (Diálogo de opciones individuales sin cambios)
+    // Diálogo de opciones de lista individual
+    listaSeleccionada?.let { lista ->
+        var mostrarOpcionesCopia by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { listaSeleccionada = null },
+            title = { Text(lista.lista.nombre) },
+            text = {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Renombrar") },
+                        leadingContent = { Icon(Icons.Default.Edit, null) },
+                        modifier = Modifier.clickable {
+                            // TODO: Implementar diálogo de renombrar
+                            listaSeleccionada = null
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Copiar") },
+                        leadingContent = { Icon(Icons.Default.ContentCopy, null) },
+                        modifier = Modifier.clickable {
+                            mostrarOpcionesCopia = true
+                        }
+                    )
+                    ListItem(
+                        headlineContent = { Text("Borrar") },
+                        leadingContent = { Icon(Icons.Default.Delete, null) },
+                        modifier = Modifier.clickable {
+                            listasViewModel.eliminarLista(lista.lista.id)
+                            listaSeleccionada = null
+                        }
+                    )
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { listaSeleccionada = null }) {
+                    Text("CERRAR")
+                }
+            }
+        )
+
+        if (mostrarOpcionesCopia) {
+            AlertDialog(
+                onDismissRequest = { mostrarOpcionesCopia = false },
+                title = { Text("¿Qué deseas copiar?") },
+                text = {
+                    Column {
+                        ListItem(
+                            headlineContent = { Text("Lista completa") },
+                            modifier = Modifier.clickable {
+                                listasViewModel.copiarListaCompleta(lista.lista.id, lista.lista.nombre)
+                                mostrarOpcionesCopia = false
+                                listaSeleccionada = null
+                            }
+                        )
+                        ListItem(
+                            headlineContent = { Text("Artículos no comprados") },
+                            modifier = Modifier.clickable {
+                                listasViewModel.copiarSoloNoComprados(lista.lista.id, lista.lista.nombre)
+                                mostrarOpcionesCopia = false
+                                listaSeleccionada = null
+                            }
+                        )
+                        ListItem(
+                            headlineContent = { Text("Artículos comprados") },
+                            modifier = Modifier.clickable {
+                                listasViewModel.copiarSoloComprados(lista.lista.id, lista.lista.nombre)
+                                mostrarOpcionesCopia = false
+                                listaSeleccionada = null
+                            }
+                        )
+                    }
+                },
+                confirmButton = {},
+                dismissButton = {
+                    TextButton(onClick = { mostrarOpcionesCopia = false }) {
+                        Text("CANCELAR")
+                    }
+                }
+            )
+        }
+    }
 }
 
 @Composable
 fun TarjetaLista(
     listaConItems: ListaConItems,
-    enModoSeleccion: Boolean,    // --- NUEVO ---
-    estaSeleccionada: Boolean, // --- NUEVO ---
+    enModoSeleccion: Boolean,
+    estaSeleccionada: Boolean,
     onClick: () -> Unit,
     onMenuClick: () -> Unit
 ) {
@@ -221,10 +337,9 @@ fun TarjetaLista(
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface // Cambia si está seleccionada
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        // --- NUEVO --- Borde para resaltar selección
         border = if (estaSeleccionada) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
     ) {
         Row(
@@ -233,7 +348,6 @@ fun TarjetaLista(
                 .padding(start = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // --- NUEVO --- Checkbox condicional
             if (enModoSeleccion) {
                 Checkbox(
                     checked = estaSeleccionada,
@@ -279,13 +393,12 @@ fun TarjetaLista(
                 )
             }
 
-            // --- NUEVO --- El IconButton ocupa espacio pero es invisible si está en modo selección
             IconButton(
                 onClick = onMenuClick,
                 modifier = Modifier.animateContentSize(),
                 enabled = !enModoSeleccion
             ) {
-                if(!enModoSeleccion) {
+                if (!enModoSeleccion) {
                     Icon(Icons.Default.MoreVert, "Opciones")
                 }
             }
