@@ -19,9 +19,16 @@ class MercadoRepository(private val database: MercadoDatabase) {
     /**
      * Hashea una contraseña usando SHA-256
      */
-    private fun hashContraseña(contraseña: String): String {
+    fun hashContraseña(contraseña: String): String {
         val bytes = MessageDigest.getInstance("SHA-256").digest(contraseña.toByteArray())
         return bytes.joinToString("") { "%02x".format(it) }
+    }
+
+    /**
+     * Obtener usuario por correo (útil para validar unicidad de correo)
+     */
+    suspend fun obtenerUsuarioPorCorreo(correo: String): Usuario? {
+        return usuarioDao.obtenerPorCorreo(correo)
     }
     
     suspend fun registrarUsuario(
