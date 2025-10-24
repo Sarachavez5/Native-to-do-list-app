@@ -3,8 +3,12 @@ package com.MercandoAndoApp.MercandoAndo.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Check
+import kotlinx.coroutines.delay
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,19 +81,7 @@ fun PerfilScreen(
         }
     }
 
-    // Diálogo modal de confirmación tras guardar correctamente (fuera del diálogo de edición)
-    if (mostrarConfirmacionExito) {
-        AlertDialog(
-            onDismissRequest = { mostrarConfirmacionExito = false },
-            title = { Text("Perfil actualizado") },
-            text = { Text(mensajeExito.ifBlank { "Los cambios se guardaron correctamente." }) },
-            confirmButton = {
-                TextButton(onClick = { mostrarConfirmacionExito = false }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
+    // Nota: la UI de confirmación se renderiza más abajo (después del Scaffold) usando Dialog
     
     // Combine los dos Scaffolds en uno
     Scaffold(
@@ -186,6 +178,42 @@ fun PerfilScreen(
             }
         }
     }
+
+    // Confirmation dialog rendered after Scaffold so it appears above all UI
+    if (mostrarConfirmacionExito) {
+        LaunchedEffect(mostrarConfirmacionExito) {
+            if (mostrarConfirmacionExito) {
+                delay(1600)
+                mostrarConfirmacionExito = false
+            }
+        }
+
+        Dialog(onDismissRequest = { mostrarConfirmacionExito = false }) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Confirmación",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(56.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Perfil actualizado", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(mensajeExito.ifBlank { "Los cambios se guardaron correctamente." }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
     
     // Diálogo de ajustes (Modo oscuro)
     if (mostrarDialogoAjustes) {
@@ -276,6 +304,13 @@ fun PerfilScreen(
 
         val cargando = perfilState is com.MercandoAndoApp.MercandoAndo.ui.viewmodel.PerfilUpdateState.Loading
 
+        // Detectar cambios en la UI para habilitar/deshabilitar el botón GUARDAR
+        val hasProfileChanges = remember(nombre, apellidos, correo, cambiarContrasena, usuarioActual) {
+            val current = usuarioActual
+            if (current == null) true
+            else nombre != current.nombre || apellidos != current.apellidos || correo != current.correo || cambiarContrasena
+        }
+
         LaunchedEffect(Unit) { /* placeholder inside dialog; actual perfilState handling está fuera */ }
 
         AlertDialog(
@@ -346,9 +381,9 @@ fun PerfilScreen(
                             onValueChange = { contrasenaActual = it; contrasenaError = null },
                             label = { Text("Contraseña actual") },
                             singleLine = true,
-                            visualTransformation = if (mostrarContrasenaActual) 
-                                VisualTransformation.None 
-                            else 
+                            visualTransformation = if (mostrarContrasenaActual)
+                                VisualTransformation.None
+                            else
                                 PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
@@ -369,9 +404,9 @@ fun PerfilScreen(
                             onValueChange = { nuevaContrasena = it; contrasenaError = null },
                             label = { Text("Nueva contraseña") },
                             singleLine = true,
-                            visualTransformation = if (mostrarNuevaContrasena) 
-                                VisualTransformation.None 
-                            else 
+                            visualTransformation = if (mostrarNuevaContrasena)
+                                VisualTransformation.None
+                            else
                                 PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
@@ -392,9 +427,9 @@ fun PerfilScreen(
                             onValueChange = { confirmarContrasena = it; contrasenaError = null },
                             label = { Text("Confirmar nueva contraseña") },
                             singleLine = true,
-                            visualTransformation = if (mostrarConfirmarContrasena) 
-                                VisualTransformation.None 
-                            else 
+                            visualTransformation = if (mostrarConfirmarContrasena)
+                                VisualTransformation.None
+                            else
                                 PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Password,
@@ -409,6 +444,18 @@ fun PerfilScreen(
                         )
 
                         if (contrasenaError != null) Text(contrasenaError!!, color = MaterialTheme.colorScheme.error)
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Mostrar alerta cuando no se detecten cambios (informa al usuario por debajo del formulario)
+                    if (!hasProfileChanges) {
+                        Text(
+                            text = "No se han realizado cambios para guardar",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             },
@@ -429,18 +476,21 @@ fun PerfilScreen(
 
                         if (!anyError) {
                             focusManager.clearFocus(true)
-                            authViewModel.actualizarPerfil(
-                                nombre = nombre,
-                                apellidos = apellidos,
-                                correo = correo,
-                                cambiarContrasena = cambiarContrasena,
-                                contrasenaActual = contrasenaActual.takeIf { it.isNotBlank() },
-                                nuevaContrasena = nuevaContrasena.takeIf { it.isNotBlank() },
-                                confirmarContrasena = confirmarContrasena.takeIf { it.isNotBlank() }
-                            )
+                            // Protección extra: no llamar si no hay cambios
+                            if (hasProfileChanges) {
+                                authViewModel.actualizarPerfil(
+                                    nombre = nombre,
+                                    apellidos = apellidos,
+                                    correo = correo,
+                                    cambiarContrasena = cambiarContrasena,
+                                    contrasenaActual = contrasenaActual.takeIf { it.isNotBlank() },
+                                    nuevaContrasena = nuevaContrasena.takeIf { it.isNotBlank() },
+                                    confirmarContrasena = confirmarContrasena.takeIf { it.isNotBlank() }
+                                )
+                            }
                         }
                     },
-                    enabled = !cargando
+                    enabled = !cargando && hasProfileChanges
                 ) {
                     if (cargando) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
