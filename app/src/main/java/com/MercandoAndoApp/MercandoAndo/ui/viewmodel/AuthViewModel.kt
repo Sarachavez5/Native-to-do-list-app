@@ -24,6 +24,10 @@ class AuthViewModel(
     
     private val _modoOscuro = MutableStateFlow(false)
     val modoOscuro: StateFlow<Boolean> = _modoOscuro.asStateFlow()
+
+    // Estado para la actualización de perfil
+    private val _perfilUpdateState = MutableStateFlow<PerfilUpdateState>(PerfilUpdateState.Idle)
+    val perfilUpdateState: StateFlow<PerfilUpdateState> = _perfilUpdateState.asStateFlow()
     
     init {
         verificarSesionGuardada()
@@ -149,6 +153,123 @@ class AuthViewModel(
             preferencias.alternarModoOscuro(nuevoEstado)
         }
     }
+
+    /**
+     * Actualizar perfil del usuario
+     * - Valida campos
+     * - Verifica unicidad de correo
+     * - Si se cambia contraseña, verifica la actual y aplica hash
+     */
+    fun actualizarPerfil(
+        nombre: String,
+        apellidos: String,
+        correo: String,
+        cambiarContrasena: Boolean = false,
+        contrasenaActual: String? = null,
+        nuevaContrasena: String? = null,
+        confirmarContrasena: String? = null
+    ) {
+        viewModelScope.launch {
+            _perfilUpdateState.value = PerfilUpdateState.Loading
+
+            val usuario = _usuarioActual.value
+            if (usuario == null) {
+                _perfilUpdateState.value = PerfilUpdateState.Error("Usuario no autenticado")
+                return@launch
+            }
+
+            // Validaciones básicas
+            if (nombre.isBlank()) {
+                _perfilUpdateState.value = PerfilUpdateState.Error("El nombre no puede estar vacío")
+                return@launch
+            }
+            if (apellidos.isBlank()) {
+                _perfilUpdateState.value = PerfilUpdateState.Error("Los apellidos no pueden estar vacíos")
+                return@launch
+            }
+
+            // Si cambió el correo, verificar unicidad
+            if (correo.isNotBlank() && correo != usuario.correo) {
+                val existente = repository.obtenerUsuarioPorCorreo(correo)
+                if (existente != null && existente.id != usuario.id) {
+                    _perfilUpdateState.value = PerfilUpdateState.Error("El correo ya está en uso")
+                    return@launch
+                }
+            }
+
+            var nuevaHash = usuario.contraseñaHash
+
+            if (cambiarContrasena) {
+                // Validaciones de contraseña
+                if (contrasenaActual.isNullOrBlank()) {
+                    _perfilUpdateState.value = PerfilUpdateState.Error("Ingresa la contraseña actual")
+                    return@launch
+                }
+
+                // Verificar que la contraseña actual coincide
+                val autenticado = repository.autenticarUsuario(usuario.correo, contrasenaActual)
+                if (autenticado == null) {
+                    _perfilUpdateState.value = PerfilUpdateState.Error("Contraseña actual incorrecta")
+                    return@launch
+                }
+
+                if (nuevaContrasena.isNullOrBlank() || nuevaContrasena.length < 6) {
+                    _perfilUpdateState.value = PerfilUpdateState.Error("La nueva contraseña debe tener al menos 6 caracteres")
+                    return@launch
+                }
+
+                if (nuevaContrasena != confirmarContrasena) {
+                    _perfilUpdateState.value = PerfilUpdateState.Error("Las contraseñas no coinciden")
+                    return@launch
+                }
+
+                nuevaHash = repository.hashContraseña(nuevaContrasena)
+            }
+
+            // Detectar si no hubo cambios (salvo cambio de contraseña)
+            val sinCambios = !cambiarContrasena && nombre == usuario.nombre && apellidos == usuario.apellidos && correo == usuario.correo
+            if (sinCambios) {
+                _perfilUpdateState.value = PerfilUpdateState.Error("No se detectaron cambios para guardar")
+                return@launch
+            }
+
+            // Construir usuario actualizado
+            val usuarioActualizado = usuario.copy(
+                nombre = nombre,
+                apellidos = apellidos,
+                correo = correo,
+                contraseñaHash = nuevaHash
+            )
+
+            try {
+                repository.actualizarUsuario(usuarioActualizado)
+                // Actualizar preferencia de usuarioId (permanece igual) y estado local
+                preferencias.guardarUsuarioId(usuarioActualizado.id)
+                _usuarioActual.value = usuarioActualizado
+                _perfilUpdateState.value = PerfilUpdateState.Success("Perfil actualizado correctamente")
+            } catch (e: Exception) {
+                _perfilUpdateState.value = PerfilUpdateState.Error(e.message ?: "Error al actualizar perfil")
+            }
+        }
+    }
+
+    /**
+     * Restablecer el estado de actualización de perfil a Idle
+     * Útil para limpiar estados previos y evitar que la UI actúe sobre estados antiguos
+     */
+    fun resetPerfilState() {
+        _perfilUpdateState.value = PerfilUpdateState.Idle
+    }
+}
+
+/**
+ * Estados para la actualización de perfil
+ */
+sealed class PerfilUpdateState {
+    object Idle : PerfilUpdateState()
+    object Loading : PerfilUpdateState()
+    data class Success(val mensaje: String) : PerfilUpdateState()
+    data class Error(val mensaje: String) : PerfilUpdateState()
 }
 
 /**
